@@ -275,16 +275,19 @@ class CameraApp:
 
         cmd = [
             ffmpeg_path,
+            "-hide_banner",
+            "-loglevel",
+            "error",
             "-f",
             "video4linux2",
-            "-framerate",
-            str(FRAME_RATE),
-            "-video_size",
-            f"{CAPTURE_WIDTH}x{CAPTURE_HEIGHT}",
             "-i",
             CAMERA_DEVICE,
+            "-vf",
+            f"fps={FRAME_RATE},scale={CAPTURE_WIDTH}:{CAPTURE_HEIGHT}",
             "-pix_fmt",
             "rgb24",
+            "-vcodec",
+            "rawvideo",
             "-f",
             "rawvideo",
             "-",
@@ -313,8 +316,8 @@ class CameraApp:
             return
 
         while self.is_running:
-            frame_bytes = self.capture_process.stdout.read(FRAME_SIZE)
-            if len(frame_bytes) != FRAME_SIZE:
+            frame_bytes = self.read_exact_frame()
+            if frame_bytes is None:
                 break
 
             frame = Image.frombytes("RGB", (CAPTURE_WIDTH, CAPTURE_HEIGHT), frame_bytes)
@@ -331,6 +334,25 @@ class CameraApp:
                     self.is_recording = False
 
         self.is_running = False
+
+    def read_exact_frame(self):
+        if self.capture_process is None or self.capture_process.stdout is None:
+            return None
+
+        remaining = FRAME_SIZE
+        chunks = []
+
+        while remaining > 0 and self.is_running:
+            chunk = self.capture_process.stdout.read(remaining)
+            if not chunk:
+                return None
+            chunks.append(chunk)
+            remaining -= len(chunk)
+
+        if remaining != 0:
+            return None
+
+        return b"".join(chunks)
 
     def update_frame(self):
         with self.frame_lock:
