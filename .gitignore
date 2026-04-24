@@ -1,0 +1,8 @@
+*
+!.gitignore
+!PKGBUILD
+!.SRCINFO
+!README.md
+!camera.py
+!simcamera
+!simcamera.desktop
