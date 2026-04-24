@@ -1,6 +1,6 @@
 pkgname=simcamera
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Simple desktop camera app built with Tkinter and OpenCV"
 arch=('any')
 url="https://github.com/inxeoz/simcamera"
@@ -9,12 +9,11 @@ depends=(
   'python'
   'python-opencv'
   'python-pillow'
-  'python-numpy'
   'tk'
-  'ffmpeg'
-  'libnotify'
 )
 optdepends=(
+  'ffmpeg: mux recorded audio into video output'
+  'libnotify: desktop notifications via notify-send'
   'python-sounddevice: microphone recording support'
   'python-scipy: save recorded audio before ffmpeg muxing'
 )

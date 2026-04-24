@@ -7,8 +7,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 import threading
-import numpy as np
 import os
+import shutil
 
 APP_NAME = "Simple Camera"
 FRAME_RATE = 30
@@ -17,6 +17,7 @@ VIDEO_CODEC = cv2.VideoWriter_fourcc(*"mp4v")
 
 # Try to import audio libs; fallback gracefully if missing
 try:
+    import numpy as np
     import sounddevice as sd
     from scipy.io.wavfile import write
     AUDIO_SUPPORT = True
@@ -174,13 +175,16 @@ class CameraApp:
     def finalize_video(self):
         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
         final_path = self.save_dir / f"VID_{ts}.mp4"
-        
-        if AUDIO_SUPPORT and self.audio_data:
+
+        saved_without_audio = False
+        ffmpeg_path = shutil.which("ffmpeg")
+
+        if AUDIO_SUPPORT and self.audio_data and ffmpeg_path:
             audio_array = np.concatenate(self.audio_data, axis=0)
             write(self.temp_audio, self.sample_rate, audio_array)
-            subprocess.run(
+            result = subprocess.run(
                 [
-                    "ffmpeg",
+                    ffmpeg_path,
                     "-y",
                     "-i",
                     self.temp_video,
@@ -196,9 +200,12 @@ class CameraApp:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-        else:
-            if os.path.exists(self.temp_video):
+            if result.returncode != 0 and os.path.exists(self.temp_video):
                 os.rename(self.temp_video, str(final_path))
+                saved_without_audio = True
+        elif os.path.exists(self.temp_video):
+            os.rename(self.temp_video, str(final_path))
+            saved_without_audio = AUDIO_SUPPORT and bool(self.audio_data)
 
         for temp_path in (self.temp_audio, self.temp_video):
             try:
@@ -206,8 +213,11 @@ class CameraApp:
                     os.remove(temp_path)
             except OSError:
                 pass
-            
-        self.notify("Video Saved")
+
+        if saved_without_audio:
+            self.notify("Video Saved (without audio)")
+        else:
+            self.notify("Video Saved")
 
     def update_frame(self):
         if self.cap and self.cap.isOpened():
