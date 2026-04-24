@@ -1,6 +1,6 @@
 pkgname=simcamera
 pkgver=0.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc="Simple desktop camera app built with Tkinter, Pillow, and ffmpeg"
 arch=('any')
 url="https://github.com/inxeoz/simcamera"
