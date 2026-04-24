@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Simple Camera
+Comment=Simple desktop camera app
+Exec=simcamera
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=camera;webcam;photo;video;
+StartupNotify=true
