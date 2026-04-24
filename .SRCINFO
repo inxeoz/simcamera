@@ -1,7 +1,7 @@
 pkgbase = simcamera
 	pkgdesc = Simple desktop camera app built with Tkinter, Pillow, and ffmpeg
 	pkgver = 0.1.0
-	pkgrel = 4
+	pkgrel = 5
 	url = https://github.com/inxeoz/simcamera
 	arch = any
 	license = MIT
