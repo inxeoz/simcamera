@@ -1,6 +1,6 @@
 # simcamera
 
-`simcamera` is a small desktop camera app written in Python with Tkinter and OpenCV.
+`simcamera` is a small desktop camera app written in Python with Tkinter, Pillow, and `ffmpeg`.
 
 ## Local build on Arch
 
@@ -12,16 +12,13 @@ simcamera
 ## Runtime dependencies
 
 - `python`
-- `python-opencv`
 - `python-pillow`
 - `tk`
-
-Optional audio recording support:
-
 - `ffmpeg`
+
+Optional:
+
 - `libnotify`
-- `python-sounddevice`
-- `python-scipy`
 
 ## Before publishing to AUR
 
@@ -92,4 +89,4 @@ Push to AUR:
 git push aur master
 ```
 
-If you changed only application code and did not change `PKGBUILD` metadata, it is still fine to regenerate `.SRCINFO` before pushing so the AUR package stays in sync.
+If you changed `PKGBUILD`, always regenerate `.SRCINFO` before pushing to AUR.
