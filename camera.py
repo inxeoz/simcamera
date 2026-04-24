@@ -33,10 +33,13 @@ class CameraApp:
         self.frame_lock = threading.Lock()
         self.is_running = False
         self.is_recording = False
+        self.is_closing = False
         self.mode = "photo"
         self.mirror_enabled = True
         self.show_settings = False
         self.start_time = None
+        self.frame_after_id = None
+        self.timer_after_id = None
 
         self.save_dir = Path.home() / "Pictures" / "Camera"
         self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -173,11 +176,11 @@ class CameraApp:
         self.mirror_btn.config(text=f"MIRROR: {'ON' if self.mirror_enabled else 'OFF'}")
 
     def update_timer(self):
-        if self.is_recording:
+        if self.is_recording and not self.is_closing:
             elapsed = datetime.now() - self.start_time
             minutes, seconds = divmod(int(elapsed.total_seconds()), 60)
             self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
-            self.root.after(1000, self.update_timer)
+            self.timer_after_id = self.root.after(1000, self.update_timer)
 
     def handle_action(self):
         if self.mode == "photo":
@@ -261,11 +264,12 @@ class CameraApp:
 
     def finalize_recording(self, process):
         try:
-            process.wait(timeout=15)
+            process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()
-        self.notify("Video Saved")
+        if not self.is_closing:
+            self.notify("Video Saved")
 
     def start_camera(self):
         ffmpeg_path = shutil.which("ffmpeg")
@@ -315,7 +319,7 @@ class CameraApp:
         if self.capture_process is None or self.capture_process.stdout is None:
             return
 
-        while self.is_running:
+        while self.is_running and not self.is_closing:
             frame_bytes = self.read_exact_frame()
             if frame_bytes is None:
                 break
@@ -342,7 +346,7 @@ class CameraApp:
         remaining = FRAME_SIZE
         chunks = []
 
-        while remaining > 0 and self.is_running:
+        while remaining > 0 and self.is_running and not self.is_closing:
             chunk = self.capture_process.stdout.read(remaining)
             if not chunk:
                 return None
@@ -368,8 +372,8 @@ class CameraApp:
                 self.camera_label.config(image=photo)
                 self.camera_label.image = photo
 
-        if self.is_running:
-            self.root.after(FRAME_DELAY_MS, self.update_frame)
+        if self.is_running and not self.is_closing:
+            self.frame_after_id = self.root.after(FRAME_DELAY_MS, self.update_frame)
 
     def change_dir(self):
         directory = filedialog.askdirectory(initialdir=str(self.save_dir))
@@ -385,18 +389,54 @@ class CameraApp:
             print(msg)
 
     def on_close(self):
+        if self.is_closing:
+            return
+
+        self.is_closing = True
         self.is_running = False
-        self.stop_recording()
+        self.root.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        if self.frame_after_id is not None:
+            self.root.after_cancel(self.frame_after_id)
+            self.frame_after_id = None
+        if self.timer_after_id is not None:
+            self.root.after_cancel(self.timer_after_id)
+            self.timer_after_id = None
+
+        record_process = self.record_process
+        self.record_process = None
+        self.is_recording = False
+        self.timer_label.place_forget()
+        if record_process is not None:
+            try:
+                if record_process.stdin:
+                    record_process.stdin.close()
+            except OSError:
+                pass
+            try:
+                record_process.terminate()
+                record_process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                record_process.kill()
+                record_process.wait()
 
         process = self.capture_process
         self.capture_process = None
         if process is not None:
             try:
+                if process.stdout:
+                    process.stdout.close()
+            except OSError:
+                pass
+            try:
                 process.terminate()
-                process.wait(timeout=3)
+                process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
+
+        if self.capture_thread is not None and self.capture_thread.is_alive():
+            self.capture_thread.join(timeout=1)
 
         self.root.destroy()
 
