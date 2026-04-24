@@ -14,13 +14,12 @@ simcamera
 - `python`
 - `python-opencv`
 - `python-pillow`
-- `python-numpy`
 - `tk`
-- `ffmpeg`
-- `libnotify`
 
 Optional audio recording support:
 
+- `ffmpeg`
+- `libnotify`
 - `python-sounddevice`
 - `python-scipy`
 
@@ -59,3 +58,38 @@ cd simcamera
 ```
 
 Then copy in the package files, commit, and push.
+
+## Update And Push Changes
+
+When you edit the app or package files, update `.SRCINFO` before pushing to AUR:
+
+```bash
+makepkg --printsrcinfo > .SRCINFO
+```
+
+Check what changed:
+
+```bash
+git status
+```
+
+Commit the update:
+
+```bash
+git add camera.py PKGBUILD .SRCINFO simcamera simcamera.desktop README.md .gitignore
+git commit -m "Describe the change"
+```
+
+Push to GitHub:
+
+```bash
+git push origin master
+```
+
+Push to AUR:
+
+```bash
+git push aur master
+```
+
+If you changed only application code and did not change `PKGBUILD` metadata, it is still fine to regenerate `.SRCINFO` before pushing so the AUR package stays in sync.
